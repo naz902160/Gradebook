@@ -136,7 +136,6 @@
 </head>
 <body>
 
-<!-- SIGN IN -->
 <div id="loginView">
   <form class="login-card" id="loginForm" autocomplete="off">
     <h1>Teacher Gradebook</h1>
@@ -150,13 +149,12 @@
   </form>
 </div>
 
-<!-- DASHBOARD -->
 <div id="appView" hidden>
   <div class="wrap">
     <div class="top">
       <div>
         <h1>Teacher Gradebook</h1>
-        <div class="sub">Records are saved in this browser automatically.</div>
+        <div class="sub">Records saved across devices.</div>
       </div>
       <div class="top-actions">
         <button class="btn ghost sm" id="expBtn" type="button">Export backup</button>
@@ -189,7 +187,6 @@
   </div>
 </div>
 
-<!-- STUDENT VIEW (student sign-in) -->
 <div id="studentView" hidden>
   <div class="wrap">
     <div class="top">
@@ -203,7 +200,6 @@
   </div>
 </div>
 
-<!-- STUDENT FORM -->
 <div class="overlay" id="formView" hidden>
   <form class="modal" id="studentForm">
     <h2 id="formTitle">Add student</h2>
@@ -230,7 +226,6 @@
   </form>
 </div>
 
-<!-- REPORT -->
 <div class="overlay" id="reportView" hidden>
   <div class="modal">
     <div class="report" id="reportBody"></div>
@@ -242,7 +237,6 @@
   </div>
 </div>
 
-<!-- EXPORT -->
 <div class="overlay" id="exportView" hidden>
   <div class="modal">
     <h2>Export backup</h2>
@@ -259,7 +253,6 @@
   </div>
 </div>
 
-<!-- IMPORT -->
 <div class="overlay" id="importView" hidden>
   <div class="modal">
     <h2>Import backup</h2>
@@ -277,7 +270,6 @@
   </div>
 </div>
 
-<!-- CONFIRM -->
 <div class="overlay" id="confirmView" hidden>
   <div class="modal narrow">
     <h2 id="cTitle">Are you sure?</h2>
@@ -291,360 +283,388 @@
 
 <div id="toast" role="status" hidden></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-const KEY = 'tdg_students_v1';
-const SESSION = 'tdg_session_v1';
-const ADMIN_USER = 'fahadis3mk';
-const ADMIN_PASS = 'Abdulmjeedismyslave';
+  const firebaseConfig = {
+    apiKey: "AIzaSyA8LL_RHYXomCo9IQUdmvarLgpbK0yDLP4",
+    authDomain: "gradebook-6c1db.firebaseapp.com",
+    projectId: "gradebook-6c1db",
+    storageBucket: "gradebook-6c1db.firebasestorage.app",
+    messagingSenderId: "331597119019",
+    appId: "1:331597119019:web:3775cdaaf502ede790b46e",
+    measurementId: "G-118PYKTVT4"
+  };
 
-const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-/* ---------- Storage (all access guarded) ---------- */
-function lsGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
-function lsSet(k, v){ try { localStorage.setItem(k, v); return true; } catch { return false; } }
-function lsDel(k){ try { localStorage.removeItem(k); } catch {} }
+  const KEY = 'tdg_students_v1';
+  const SESSION = 'tdg_session_v1';
+  const ADMIN_USER = 'fahadis3mk';
+  const ADMIN_PASS = 'Abdulmjeedismyslave';
 
-let students = [];
-try { const d = JSON.parse(lsGet(KEY)); if (Array.isArray(d)) students = d; } catch {}
-function save(){ $('storeWarn').hidden = lsSet(KEY, JSON.stringify(students)); }
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-/* ---------- Grades ---------- */
-function average(s){
-  const g = s.grades || [];
-  return g.length ? g.reduce((a, x) => a + x.score, 0) / g.length : null;
-}
-function letter(avg){
-  if (avg === null) return 'N/A';
-  return avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'F';
-}
-const fmt = n => n === null ? '–' : (Math.round(n * 10) / 10).toFixed(1);
-const badge = l => `<span class="badge g${l === 'N/A' ? 'NA' : l}">${l}</span>`;
+  function lsGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, v); return true; } catch { return false; } }
+  function lsDel(k){ try { localStorage.removeItem(k); } catch {} }
 
-/* ---------- UI helpers ---------- */
-let toastTimer;
-function toast(msg){
-  const t = $('toast'); t.textContent = msg; t.hidden = false;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
-}
-function show(id){ $(id).hidden = false; }
-function hide(id){ $(id).hidden = true; }
-function closeAll(){ ['formView','reportView','exportView','importView','confirmView'].forEach(hide); confirmFn = null; }
+  let students = [];
+  try { const d = JSON.parse(lsGet(KEY)); if (Array.isArray(d)) students = d; } catch {}
 
-let confirmFn = null;
-function askConfirm(title, text, label, fn){
-  $('cTitle').textContent = title; $('cText').textContent = text; $('cYes').textContent = label;
-  confirmFn = fn; show('confirmView');
-}
-$('cNo').onclick = () => { confirmFn = null; hide('confirmView'); };
-$('cYes').onclick = () => { const f = confirmFn; confirmFn = null; hide('confirmView'); if (f) f(); };
-
-async function copyText(text, btn, ta){
-  const old = btn.textContent;
-  let ok = false;
-  try { await navigator.clipboard.writeText(text); ok = true; } catch {}
-  if (!ok) {
-    const el = ta || Object.assign(document.createElement('textarea'), { value: text });
-    if (!ta) { el.style.position = 'fixed'; el.style.opacity = '0'; document.body.appendChild(el); }
-    el.focus(); el.select();
-    try { ok = document.execCommand('copy'); } catch {}
-    if (!ta) el.remove();
+  async function saveRemoteStudents(){
+    try {
+      await db.collection('gradebook').doc('students').set({ students, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Firestore sync failed:', e);
+    }
   }
-  btn.textContent = ok ? 'Copied' : 'Select and copy manually';
-  setTimeout(() => { btn.textContent = old; }, 1800);
-}
 
-/* ---------- Auth ---------- */
-function currentStudent(){
-  const v = lsGet(SESSION) || '';
-  return v.startsWith('s:') ? (students.find(s => s.id === v.slice(2)) || null) : null;
-}
-function showApp(){
-  const v = lsGet(SESSION);
-  const admin = v === '1';
-  const stu = currentStudent();
-  if (v && !admin && !stu) lsDel(SESSION);
-  $('loginView').hidden = admin || !!stu;
-  $('appView').hidden = !admin;
-  $('studentView').hidden = !stu;
-  if (admin) render();
-  if (stu) { $('svName').textContent = stu.name; $('svBody').innerHTML = reportHtml(stu); }
-}
-$('loginForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const u = $('lu').value.trim(), p = $('lp').value;
-  let ok = false;
-  if (u === ADMIN_USER && p === ADMIN_PASS) { lsSet(SESSION, '1'); ok = true; }
-  else {
-    const stu = students.find(s => s.username && s.username.toLowerCase() === u.toLowerCase() && s.password === p);
-    if (stu) { lsSet(SESSION, 's:' + stu.id); ok = true; }
+  async function loadRemoteStudents(){
+    try {
+      const snap = await db.collection('gradebook').doc('students').get();
+      if (snap.exists && Array.isArray(snap.data().students)) {
+        students = snap.data().students;
+        lsSet(KEY, JSON.stringify(students));
+        if (typeof render === 'function') render();
+      }
+    } catch (e) {
+      console.warn('Firestore load failed:', e);
+    }
   }
-  if (ok) { $('loginErr').textContent = ''; $('lp').value = ''; showApp(); }
-  else $('loginErr').textContent = 'Incorrect username or password.';
-});
-const doLogout = () => { lsDel(SESSION); closeAll(); showApp(); };
-$('logout').onclick = doLogout;
-$('svLogout').onclick = doLogout;
 
-/* ---------- Dashboard ---------- */
-function render(){
-  const q = $('search').value.trim().toLowerCase();
-  const list = students.filter(s => !q || s.name.toLowerCase().includes(q) || (s.section || '').toLowerCase().includes(q));
+  function save(){
+    $('storeWarn').hidden = lsSet(KEY, JSON.stringify(students));
+    saveRemoteStudents();
+  }
 
-  const avgs = students.map(average).filter(a => a !== null);
-  $('sCount').textContent = students.length;
-  $('sAvg').textContent = avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–';
-  $('sPass').textContent = avgs.filter(a => a >= 60).length;
-  $('sAcc').textContent = students.filter(s => s.username).length;
+  function average(s){
+    const g = s.grades || [];
+    return g.length ? g.reduce((a, x) => a + x.score, 0) / g.length : null;
+  }
+  function letter(avg){
+    if (avg === null) return 'N/A';
+    return avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'F';
+  }
+  const fmt = n => n === null ? '–' : (Math.round(n * 10) / 10).toFixed(1);
+  const badge = l => `<span class="badge g${l === 'N/A' ? 'NA' : l}">${l}</span>`;
 
-  $('tbody').innerHTML = list.map(s => {
-    const a = average(s);
-    return `<tr>
-      <td><strong>${esc(s.name)}</strong></td>
-      <td class="hide-sm">${esc(s.section) || '–'}</td>
-      <td class="hide-sm num">${(s.grades || []).length}</td>
-      <td class="hide-sm">${s.username ? esc(s.username) : '–'}</td>
-      <td class="num">${fmt(a)}</td>
-      <td>${badge(letter(a))}</td>
-      <td><div class="acts">
-        <button class="btn ghost sm" data-act="report" data-id="${esc(s.id)}" type="button">Report</button>
-        <button class="btn ghost sm" data-act="edit" data-id="${esc(s.id)}" type="button">Edit</button>
-        <button class="btn ghost sm" data-act="del" data-id="${esc(s.id)}" type="button">Delete</button>
-      </div></td></tr>`;
-  }).join('');
+  let toastTimer;
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function show(id){ $(id).hidden = false; }
+  function hide(id){ $(id).hidden = true; }
+  function closeAll(){ ['formView','reportView','exportView','importView','confirmView'].forEach(hide); }
 
-  $('tbl').hidden = list.length === 0;
-  $('empty').hidden = list.length > 0;
-  $('empty').innerHTML = students.length
-    ? '<b>No matches</b>Try a different name or section.'
-    : '<b>No students yet</b>Select “Add student” to enter your first record.';
-}
-$('search').addEventListener('input', render);
-$('tbody').addEventListener('click', e => {
-  const b = e.target.closest('button[data-act]');
-  if (!b) return;
-  const s = students.find(x => x.id === b.dataset.id);
-  if (!s) return;
-  if (b.dataset.act === 'edit') openForm(s);
-  if (b.dataset.act === 'report') openReport(s);
-  if (b.dataset.act === 'del') askConfirm('Delete student', `Delete ${s.name} and all their grades and comments? This cannot be undone.`, 'Delete', () => {
-    students = students.filter(x => x.id !== s.id);
-    save(); render(); toast('Student deleted');
+  let confirmFn = null;
+  function askConfirm(title, text, label, fn){
+    $('cTitle').textContent = title; $('cText').textContent = text; $('cYes').textContent = label;
+    confirmFn = fn; show('confirmView');
+  }
+  $('cNo').onclick = () => { confirmFn = null; hide('confirmView'); };
+  $('cYes').onclick = () => { const f = confirmFn; confirmFn = null; hide('confirmView'); if (f) f(); };
+
+  async function copyText(text, btn, ta){
+    const old = btn.textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+    if (!ok) {
+      const el = ta || Object.assign(document.createElement('textarea'), { value: text });
+      if (!ta) { el.style.position = 'fixed'; el.style.opacity = '0'; document.body.appendChild(el); }
+      el.focus(); el.select();
+      try { ok = document.execCommand('copy'); } catch {}
+      if (!ta) el.remove();
+    }
+    btn.textContent = ok ? 'Copied' : 'Select and copy manually';
+    setTimeout(() => { btn.textContent = old; }, 1800);
+  }
+
+  function currentStudent(){
+    const v = lsGet(SESSION) || '';
+    return v.startsWith('s:') ? (students.find(s => s.id === v.slice(2)) || null) : null;
+  }
+  function showApp(){
+    const v = lsGet(SESSION);
+    const admin = v === '1';
+    const stu = currentStudent();
+    if (v && !admin && !stu) lsDel(SESSION);
+    $('loginView').hidden = admin || !!stu;
+    $('appView').hidden = !admin;
+    $('studentView').hidden = !stu;
+    if (admin) render();
+    if (stu) { $('svName').textContent = stu.name; $('svBody').innerHTML = reportHtml(stu); }
+  }
+  $('loginForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const u = $('lu').value.trim(), p = $('lp').value;
+    let ok = false;
+    if (u === ADMIN_USER && p === ADMIN_PASS) { lsSet(SESSION, '1'); ok = true; }
+    else {
+      const stu = students.find(s => s.username && s.username.toLowerCase() === u.toLowerCase() && s.password === p);
+      if (stu) { lsSet(SESSION, 's:' + stu.id); ok = true; }
+    }
+    if (ok) { $('loginErr').textContent = ''; $('lp').value = ''; showApp(); }
+    else $('loginErr').textContent = 'Incorrect username or password.';
   });
-});
+  const doLogout = () => { lsDel(SESSION); closeAll(); showApp(); };
+  $('logout').onclick = doLogout;
+  $('svLogout').onclick = doLogout;
 
-/* ---------- Student form ---------- */
-let editingId = null;
-function gradeRow(subject = '', score = ''){
-  const d = document.createElement('div');
-  d.className = 'grade-row';
-  d.innerHTML = `<input class="gs" placeholder="Subject" aria-label="Subject" value="${esc(subject)}">
-    <input class="gn" type="number" min="0" max="100" step="0.1" placeholder="Score" aria-label="Score" value="${esc(score)}">
-    <button type="button" class="btn ghost sm" aria-label="Remove subject">Remove</button>`;
-  d.querySelector('button').onclick = () => d.remove();
-  $('gradeRows').appendChild(d);
-}
-function openForm(s){
-  editingId = s ? s.id : null;
-  $('formTitle').textContent = s ? 'Edit student' : 'Add student';
-  $('fName').value = s ? s.name : '';
-  $('fSection').value = s ? s.section : '';
-  $('fReport').value = s ? s.report : '';
-  $('fUser').value = s ? (s.username || '') : '';
-  $('fPass').value = s ? (s.password || '') : '';
-  $('formErr').textContent = '';
-  $('gradeRows').innerHTML = '';
-  (s && s.grades.length ? s.grades : [{ subject: '', score: '' }]).forEach(g => gradeRow(g.subject, g.score));
-  show('formView');
-  $('fName').focus();
-}
-$('addBtn').onclick = () => openForm(null);
-$('addSubject').onclick = () => gradeRow();
-$('cancelForm').onclick = () => hide('formView');
-$('studentForm').addEventListener('submit', e => {
-  e.preventDefault();
-  const grades = [...document.querySelectorAll('#gradeRows .grade-row')].map(r => ({
-    subject: r.querySelector('.gs').value.trim(),
-    score: parseFloat(r.querySelector('.gn').value)
-  })).filter(g => g.subject && !isNaN(g.score)).map(g => ({ subject: g.subject, score: Math.min(100, Math.max(0, g.score)) }));
+  function render(){
+    const q = $('search').value.trim().toLowerCase();
+    const list = students.filter(s => !q || s.name.toLowerCase().includes(q) || (s.section || '').toLowerCase().includes(q));
 
-  const data = { name: $('fName').value.trim(), section: $('fSection').value.trim(), grades, report: $('fReport').value.trim(), username: $('fUser').value.trim(), password: $('fPass').value };
-  if (!data.name) return;
-  const fe = $('formErr'); fe.textContent = '';
-  if (data.username && !data.password) { fe.textContent = 'Enter a password for this username.'; return; }
-  if (!data.username && data.password) { fe.textContent = 'Enter a username for this password.'; return; }
-  if (data.username.toLowerCase() === ADMIN_USER.toLowerCase()) { fe.textContent = 'That username is reserved. Choose another.'; return; }
-  if (data.username && students.some(x => x.id !== editingId && (x.username || '').toLowerCase() === data.username.toLowerCase())) { fe.textContent = 'That username is already taken.'; return; }
-  if (editingId) {
-    const i = students.findIndex(x => x.id === editingId);
-    if (i >= 0) students[i] = { ...students[i], ...data };
-  } else {
-    students.push({ id: uid(), ...data });
+    const avgs = students.map(average).filter(a => a !== null);
+    $('sCount').textContent = students.length;
+    $('sAvg').textContent = avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–';
+    $('sPass').textContent = avgs.filter(a => a >= 60).length;
+    $('sAcc').textContent = students.filter(s => s.username).length;
+
+    $('tbody').innerHTML = list.map(s => {
+      const a = average(s);
+      return `<tr>
+        <td><strong>${esc(s.name)}</strong></td>
+        <td class="hide-sm">${esc(s.section) || '–'}</td>
+        <td class="hide-sm num">${(s.grades || []).length}</td>
+        <td class="hide-sm">${s.username ? esc(s.username) : '–'}</td>
+        <td class="num">${fmt(a)}</td>
+        <td>${badge(letter(a))}</td>
+        <td><div class="acts">
+          <button class="btn ghost sm" data-act="report" data-id="${esc(s.id)}" type="button">Report</button>
+          <button class="btn ghost sm" data-act="edit" data-id="${esc(s.id)}" type="button">Edit</button>
+          <button class="btn ghost sm" data-act="del" data-id="${esc(s.id)}" type="button">Delete</button>
+        </div></td></tr>`;
+    }).join('');
+
+    $('tbl').hidden = list.length === 0;
+    $('empty').hidden = list.length > 0;
+    $('empty').innerHTML = students.length
+      ? '<b>No matches</b>Try a different name or section.'
+      : '<b>No students yet</b>Select “Add student” to enter your first record.';
   }
-  save(); render(); hide('formView');
-  toast('Student saved');
-});
-
-/* ---------- Report ---------- */
-let reportText = '';
-function reportHtml(s){
-  const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
-  const rows = (s.grades || []).map(g => `<tr><td>${esc(g.subject)}</td><td class="num">${fmt(g.score)}</td><td>${badge(letter(g.score))}</td></tr>`).join('')
-    || '<tr><td colspan="3" style="text-align:center;color:var(--muted)">No grades recorded</td></tr>';
-  return `
-    <h2>Teacher Report</h2>
-    <div class="sub">Generated ${esc(date)}</div>
-    <div class="meta"><div><strong>Student:</strong> ${esc(s.name)}</div><div><strong>Section:</strong> ${esc(s.section) || '–'}</div></div>
-    <table><thead><tr><th>Subject</th><th>Score</th><th>Letter</th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="totals"><div><b>${fmt(a)}</b>Average</div><div><b>${l}</b>Overall grade</div></div>
-    <h3>Teacher comments</h3>
-    <div class="comments">${esc(s.report) || 'No comments recorded.'}</div>
-    <div class="sig"><span>Teacher signature</span><span>Date</span></div>`;
-}
-function openReport(s){
-  const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
-  $('reportBody').innerHTML = reportHtml(s);
-  reportText = [
-    'TEACHER REPORT', `Date: ${date}`, `Student: ${s.name}`, `Section: ${s.section || '-'}`, '',
-    ...(s.grades.length ? s.grades.map(g => `${g.subject}: ${fmt(g.score)} (${letter(g.score)})`) : ['No grades recorded']),
-    '', `Average: ${fmt(a)}   Overall grade: ${l}`, '', 'Teacher comments:', s.report || 'No comments recorded.'
-  ].join('\n');
-  show('reportView');
-}
-$('closeReport').onclick = () => hide('reportView');
-$('copyReport').onclick = e => copyText(reportText, e.currentTarget);
-
-/* ---------- Export ---------- */
-const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-function buildJson(){
-  return JSON.stringify({ app: 'teacher-gradebook', version: 1, exported: new Date().toISOString(), students }, null, 2);
-}
-function buildCsv(){
-  const lines = [['Name', 'Section', 'Grades', 'Average', 'Letter', 'Report', 'Username', 'Password'].join(',')];
-  students.forEach(s => {
-    const a = average(s);
-    lines.push([s.name, s.section, s.grades.map(g => `${g.subject}:${g.score}`).join('; '), fmt(a), letter(a), s.report, s.username, s.password].map(csvCell).join(','));
-  });
-  return lines.join('\r\n');
-}
-function setExport(kind){
-  $('segJson').classList.toggle('on', kind === 'json');
-  $('segCsv').classList.toggle('on', kind === 'csv');
-  $('exportText').value = kind === 'json' ? buildJson() : buildCsv();
-}
-$('expBtn').onclick = () => { setExport('json'); show('exportView'); };
-$('segJson').onclick = () => setExport('json');
-$('segCsv').onclick = () => setExport('csv');
-$('closeExport').onclick = () => hide('exportView');
-$('copyExport').onclick = e => copyText($('exportText').value, e.currentTarget, $('exportText'));
-
-/* ---------- Import ---------- */
-function parseCSV(text){
-  const rows = []; let row = [], cur = '', q = false;
-  text = text.replace(/^\uFEFF/, '');
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) {
-      if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
-      else if (c === '"') q = false;
-      else cur += c;
-    } else if (c === '"') q = true;
-    else if (c === ',') { row.push(cur); cur = ''; }
-    else if (c === '\n' || c === '\r') {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(cur); cur = ''; rows.push(row); row = [];
-    } else cur += c;
-  }
-  if (cur || row.length) { row.push(cur); rows.push(row); }
-  return rows.filter(r => r.some(x => x.trim()));
-}
-function normalize(s){
-  if (!s || !String(s.name || '').trim()) return null;
-  const grades = Array.isArray(s.grades) ? s.grades
-    .map(g => ({ subject: String(g.subject || '').trim(), score: Math.min(100, Math.max(0, parseFloat(g.score))) }))
-    .filter(g => g.subject && !isNaN(g.score)) : [];
-  return { id: s.id ? String(s.id) : uid(), name: String(s.name).trim(), section: String(s.section || '').trim(), grades, report: String(s.report || '').trim(), username: String(s.username || '').trim(), password: String(s.password || '').trim() };
-}
-function fromCSV(text){
-  const rows = parseCSV(text);
-  if (!rows.length) return [];
-  const head = rows[0].map(h => h.trim().toLowerCase());
-  const idx = k => head.indexOf(k);
-  return rows.slice(1).map(r => ({
-    name: r[idx('name')], section: r[idx('section')], report: r[idx('report')], username: r[idx('username')], password: r[idx('password')],
-    grades: (r[idx('grades')] || '').split(';').map(p => {
-      const i = p.lastIndexOf(':');
-      return i < 0 ? null : { subject: p.slice(0, i).trim(), score: parseFloat(p.slice(i + 1)) };
-    }).filter(Boolean)
-  }));
-}
-function readImport(){
-  const text = $('impText').value.trim();
-  if (!text) throw new Error('Choose a file or paste your backup first.');
-  let raw;
-  if (text[0] === '{' || text[0] === '[') {
-    const d = JSON.parse(text);
-    raw = Array.isArray(d) ? d : d.students;
-  } else raw = fromCSV(text);
-  if (!Array.isArray(raw)) throw new Error('This does not look like a backup from this app.');
-  const out = raw.map(normalize).filter(Boolean);
-  if (!out.length) throw new Error('No valid student records were found.');
-  return out;
-}
-function openImport(){
-  $('impText').value = ''; $('impErr').textContent = ''; $('impFile').value = '';
-  $('impMerge').hidden = students.length === 0;
-  $('impReplace').textContent = students.length ? 'Replace all records' : 'Import';
-  show('importView');
-}
-$('impBtn').onclick = openImport;
-$('closeImport').onclick = () => hide('importView');
-$('impFile').addEventListener('change', e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = () => { $('impText').value = String(r.result || ''); $('impErr').textContent = ''; };
-  r.onerror = () => { $('impErr').textContent = 'That file could not be read.'; };
-  r.readAsText(f);
-});
-function finishImport(incoming, replace){
-  if (replace) students = incoming;
-  else {
-    const ids = new Set(students.map(s => s.id));
-    const names = new Set(students.map(s => (s.username || '').toLowerCase()).filter(Boolean));
-    incoming.forEach(s => {
-      if (ids.has(s.id)) s.id = uid();
-      if (s.username && names.has(s.username.toLowerCase())) { s.username = ''; s.password = ''; }
-      if (s.username) names.add(s.username.toLowerCase());
-      students.push(s);
+  $('search').addEventListener('input', render);
+  $('tbody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]');
+    if (!b) return;
+    const s = students.find(x => x.id === b.dataset.id);
+    if (!s) return;
+    if (b.dataset.act === 'edit') openForm(s);
+    if (b.dataset.act === 'report') openReport(s);
+    if (b.dataset.act === 'del') askConfirm('Delete student', `Delete ${s.name} and all their grades and comments? This cannot be undone.`, 'Delete', () => {
+      students = students.filter(x => x.id !== s.id);
+      save(); render(); toast('Student deleted');
     });
+  });
+
+  let editingId = null;
+  function gradeRow(subject = '', score = ''){
+    const d = document.createElement('div');
+    d.className = 'grade-row';
+    d.innerHTML = `<input class="gs" placeholder="Subject" aria-label="Subject" value="${esc(subject)}">
+      <input class="gn" type="number" min="0" max="100" step="0.1" placeholder="Score" aria-label="Score" value="${esc(score)}">
+      <button type="button" class="btn ghost sm" aria-label="Remove subject">Remove</button>`;
+    d.querySelector('button').onclick = () => d.remove();
+    $('gradeRows').appendChild(d);
   }
-  save(); render(); hide('importView');
-  toast(`Imported ${incoming.length} student${incoming.length === 1 ? '' : 's'}`);
-}
-$('impMerge').onclick = () => {
-  try { finishImport(readImport(), false); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; }
-};
-$('impReplace').onclick = () => {
-  let incoming;
-  try { incoming = readImport(); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; return; }
-  if (!students.length) return finishImport(incoming, true);
-  askConfirm('Replace all records', `This removes your ${students.length} current student${students.length === 1 ? '' : 's'} and loads ${incoming.length} from the backup.`, 'Replace', () => finishImport(incoming, true));
-};
+  function openForm(s){
+    editingId = s ? s.id : null;
+    $('formTitle').textContent = s ? 'Edit student' : 'Add student';
+    $('fName').value = s ? s.name : '';
+    $('fSection').value = s ? s.section : '';
+    $('fReport').value = s ? s.report : '';
+    $('fUser').value = s ? (s.username || '') : '';
+    $('fPass').value = s ? (s.password || '') : '';
+    $('formErr').textContent = '';
+    $('gradeRows').innerHTML = '';
+    (s && s.grades.length ? s.grades : [{ subject: '', score: '' }]).forEach(g => gradeRow(g.subject, g.score));
+    show('formView');
+    $('fName').focus();
+  }
+  $('addBtn').onclick = () => openForm(null);
+  $('addSubject').onclick = () => gradeRow();
+  $('cancelForm').onclick = () => hide('formView');
+  $('studentForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const grades = [...document.querySelectorAll('#gradeRows .grade-row')].map(r => ({
+      subject: r.querySelector('.gs').value.trim(),
+      score: parseFloat(r.querySelector('.gn').value)
+    })).filter(g => g.subject && !isNaN(g.score)).map(g => ({ subject: g.subject, score: Math.min(100, Math.max(0, g.score)) }));
 
-/* ---------- Dismiss modals with Escape ---------- */
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  if (!$('confirmView').hidden) { $('cNo').click(); return; }
-  closeAll();
-});
+    const data = { name: $('fName').value.trim(), section: $('fSection').value.trim(), grades, report: $('fReport').value.trim(), username: $('fUser').value.trim(), password: $('fPass').value };
+    if (!data.name) return;
+    const fe = $('formErr'); fe.textContent = '';
+    if (data.username && !data.password) { fe.textContent = 'Enter a password for this username.'; return; }
+    if (!data.username && data.password) { fe.textContent = 'Enter a username for this password.'; return; }
+    if (data.username.toLowerCase() === ADMIN_USER.toLowerCase()) { fe.textContent = 'That username is reserved. Choose another.'; return; }
+    if (data.username && students.some(x => x.id !== editingId && (x.username || '').toLowerCase() === data.username.toLowerCase())) { fe.textContent = 'That username is already taken.'; return; }
+    if (editingId) {
+      const i = students.findIndex(x => x.id === editingId);
+      if (i >= 0) students[i] = { ...students[i], ...data };
+    } else {
+      students.push({ id: uid(), ...data });
+    }
+    save(); render(); hide('formView');
+    toast('Student saved');
+  });
 
-/* ---------- Init ---------- */
-hide('confirmView');
-confirmFn = null;
-showApp();
+  let reportText = '';
+  function reportHtml(s){
+    const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
+    const rows = (s.grades || []).map(g => `<tr><td>${esc(g.subject)}</td><td class="num">${fmt(g.score)}</td><td>${badge(letter(g.score))}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="text-align:center;color:var(--muted)">No grades recorded</td></tr>';
+    return `
+      <h2>Teacher Report</h2>
+      <div class="sub">Generated ${esc(date)}</div>
+      <div class="meta"><div><strong>Student:</strong> ${esc(s.name)}</div><div><strong>Section:</strong> ${esc(s.section) || '–'}</div></div>
+      <table><thead><tr><th>Subject</th><th>Score</th><th>Letter</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="totals"><div><b>${fmt(a)}</b>Average</div><div><b>${l}</b>Overall grade</div></div>
+      <h3>Teacher comments</h3>
+      <div class="comments">${esc(s.report) || 'No comments recorded.'}</div>
+      <div class="sig"><span>Teacher signature</span><span>Date</span></div>`;
+  }
+  function openReport(s){
+    const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
+    $('reportBody').innerHTML = reportHtml(s);
+    reportText = [
+      'TEACHER REPORT', `Date: ${date}`, `Student: ${s.name}`, `Section: ${s.section || '-'}`, '',
+      ...(s.grades.length ? s.grades.map(g => `${g.subject}: ${fmt(g.score)} (${letter(g.score)})`) : ['No grades recorded']),
+      '', `Average: ${fmt(a)}   Overall grade: ${l}`, '', 'Teacher comments:', s.report || 'No comments recorded.'
+    ].join('\n');
+    show('reportView');
+  }
+  $('closeReport').onclick = () => hide('reportView');
+  $('copyReport').onclick = e => copyText(reportText, e.currentTarget);
+
+  const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  function buildJson(){
+    return JSON.stringify({ app: 'teacher-gradebook', version: 1, exported: new Date().toISOString(), students }, null, 2);
+  }
+  function buildCsv(){
+    const lines = [['Name', 'Section', 'Grades', 'Average', 'Letter', 'Report', 'Username', 'Password'].join(',')];
+    students.forEach(s => {
+      const a = average(s);
+      lines.push([s.name, s.section, s.grades.map(g => `${g.subject}:${g.score}`).join('; '), fmt(a), letter(a), s.report, s.username, s.password].map(csvCell).join(','));
+    });
+    return lines.join('\r\n');
+  }
+  function setExport(kind){
+    $('segJson').classList.toggle('on', kind === 'json');
+    $('segCsv').classList.toggle('on', kind === 'csv');
+    $('exportText').value = kind === 'json' ? buildJson() : buildCsv();
+  }
+  $('expBtn').onclick = () => { setExport('json'); show('exportView'); };
+  $('segJson').onclick = () => setExport('json');
+  $('segCsv').onclick = () => setExport('csv');
+  $('closeExport').onclick = () => hide('exportView');
+  $('copyExport').onclick = e => copyText($('exportText').value, e.currentTarget, $('exportText'));
+
+  function parseCSV(text){
+    const rows = []; let row = [], cur = '', q = false;
+    text = text.replace(/^\uFEFF/, '');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') q = false;
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cur); cur = ''; rows.push(row); row = [];
+      } else cur += c;
+    }
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows.filter(r => r.some(x => x.trim()));
+  }
+  function normalize(s){
+    if (!s || !String(s.name || '').trim()) return null;
+    const grades = Array.isArray(s.grades) ? s.grades
+      .map(g => ({ subject: String(g.subject || '').trim(), score: Math.min(100, Math.max(0, parseFloat(g.score))) }))
+      .filter(g => g.subject && !isNaN(g.score)) : [];
+    return { id: s.id ? String(s.id) : uid(), name: String(s.name).trim(), section: String(s.section || '').trim(), grades, report: String(s.report || '').trim(), username: String(s.username || '').trim(), password: String(s.password || '').trim() };
+  }
+  function fromCSV(text){
+    const rows = parseCSV(text);
+    if (!rows.length) return [];
+    const head = rows[0].map(h => h.trim().toLowerCase());
+    const idx = k => head.indexOf(k);
+    return rows.slice(1).map(r => ({
+      name: r[idx('name')], section: r[idx('section')], report: r[idx('report')], username: r[idx('username')], password: r[idx('password')],
+      grades: (r[idx('grades')] || '').split(';').map(p => {
+        const i = p.lastIndexOf(':');
+        return i < 0 ? null : { subject: p.slice(0, i).trim(), score: parseFloat(p.slice(i + 1)) };
+      }).filter(Boolean)
+    }));
+  }
+  function readImport(){
+    const text = $('impText').value.trim();
+    if (!text) throw new Error('Choose a file or paste your backup first.');
+    let raw;
+    if (text[0] === '{' || text[0] === '[') {
+      const d = JSON.parse(text);
+      raw = Array.isArray(d) ? d : d.students;
+    } else raw = fromCSV(text);
+    if (!Array.isArray(raw)) throw new Error('This does not look like a backup from this app.');
+    const out = raw.map(normalize).filter(Boolean);
+    if (!out.length) throw new Error('No valid student records were found.');
+    return out;
+  }
+  function openImport(){
+    $('impText').value = ''; $('impErr').textContent = ''; $('impFile').value = '';
+    $('impMerge').hidden = students.length === 0;
+    $('impReplace').textContent = students.length ? 'Replace all records' : 'Import';
+    show('importView');
+  }
+  $('impBtn').onclick = openImport;
+  $('closeImport').onclick = () => hide('importView');
+  $('impFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $('impText').value = String(r.result || ''); $('impErr').textContent = ''; };
+    r.onerror = () => { $('impErr').textContent = 'That file could not be read.'; };
+    r.readAsText(f);
+  });
+  function finishImport(incoming, replace){
+    if (replace) students = incoming;
+    else {
+      const ids = new Set(students.map(s => s.id));
+      const names = new Set(students.map(s => (s.username || '').toLowerCase()).filter(Boolean));
+      incoming.forEach(s => {
+        if (ids.has(s.id)) s.id = uid();
+        if (s.username && names.has(s.username.toLowerCase())) { s.username = ''; s.password = ''; }
+        if (s.username) names.add(s.username.toLowerCase());
+        students.push(s);
+      });
+    }
+    save(); render(); hide('importView');
+    toast(`Imported ${incoming.length} student${incoming.length === 1 ? '' : 's'}`);
+  }
+  $('impMerge').onclick = () => {
+    try { finishImport(readImport(), false); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; }
+  };
+  $('impReplace').onclick = () => {
+    let incoming;
+    try { incoming = readImport(); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; return; }
+    if (!students.length) return finishImport(incoming, true);
+    askConfirm('Replace all records', `This removes your ${students.length} current student${students.length === 1 ? '' : 's'} and loads ${incoming.length} from the backup.`, 'Replace', () => finishImport(incoming, true));
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('confirmView').hidden) { $('cNo').click(); return; }
+    closeAll();
+  });
+
+  hide('confirmView');
+  showApp();
+  loadRemoteStudents();
 </script>
-
 </body>
 </html>
