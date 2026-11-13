@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Teacher Gradebook</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#f4f6f3; --surface:#ffffff; --fg:#1b2420; --muted:#5f6a63; --line:#dde2dc;
+    --accent:#1f6f55; --accent-hover:#185a45; --accent-fg:#ffffff; --accent-soft:#e1f0e8;
+    --danger:#b3261e; --danger-soft:#fbe9e7;
+    --g-a:#1f7a4d; --g-b:#46792a; --g-c:#9a6212; --g-d:#b4500b; --g-f:#b3261e; --g-na:#6f7a73; --on-grade:#ffffff;
+    --overlay:rgba(14,20,17,.55); --shadow:0 18px 50px rgba(14,20,17,.22);
+    --font-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-head:"Space Grotesk","Inter",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#101512; --surface:#18201c; --fg:#e7ede8; --muted:#9aa69e; --line:#2a3530;
+      --accent:#4cc49a; --accent-hover:#6fd4b0; --accent-fg:#0b1f17; --accent-soft:#173025;
+      --danger:#ff8d84; --danger-soft:#3a1d1a;
+      --g-a:#4cc08a; --g-b:#92c85d; --g-c:#e0b04a; --g-d:#f28f50; --g-f:#ff8d84; --g-na:#8a948d; --on-grade:#0d1210;
+      --overlay:rgba(0,0,0,.65); --shadow:0 18px 50px rgba(0,0,0,.5);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101512; --surface:#18201c; --fg:#e7ede8; --muted:#9aa69e; --line:#2a3530;
+    --accent:#4cc49a; --accent-hover:#6fd4b0; --accent-fg:#0b1f17; --accent-soft:#173025;
+    --danger:#ff8d84; --danger-soft:#3a1d1a;
+    --g-a:#4cc08a; --g-b:#92c85d; --g-c:#e0b04a; --g-d:#f28f50; --g-f:#ff8d84; --g-na:#8a948d; --on-grade:#0d1210;
+    --overlay:rgba(0,0,0,.65); --shadow:0 18px 50px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:15px; line-height:1.5;
+    padding-block:0;
+    padding-left:max(16px, env(safe-area-inset-left, 0px));
+    padding-right:max(16px, env(safe-area-inset-right, 0px));
+    min-height:100vh;
+  }
+  button,input,select,textarea{font:inherit;color:inherit}
+  h1,h2,h3{font-family:var(--font-head);letter-spacing:-.01em;text-wrap:balance}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  #loginView{min-height:calc(100vh - 2px);display:flex;align-items:center;justify-content:center;padding-block:32px}
+  .login-card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;box-shadow:var(--shadow)}
+  .login-card h1{margin:0 0 4px;font-size:26px}
+  .login-card p{margin:0 0 8px;color:var(--muted)}
+  label{display:block;font-size:13px;font-weight:600;margin:16px 0 6px}
+  input,select,textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+  textarea{min-height:110px;resize:vertical}
+  .err{color:var(--danger);font-size:13px;min-height:20px;margin-top:12px}
+
+  .btn{border:1px solid transparent;background:var(--accent);color:var(--accent-fg);padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600}
+  .btn:hover{background:var(--accent-hover)}
+  .btn.full{width:100%;margin-top:16px}
+  .btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--accent-soft)}
+  .btn.danger{background:var(--danger);color:var(--surface)}
+  .btn.danger:hover{filter:brightness(1.1)}
+  .btn.sm{padding:6px 11px;font-size:13px}
+
+  .wrap{max-width:1080px;margin:0 auto;padding-block:20px 48px}
+  .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:18px}
+  .top h1{margin:0;font-size:24px}
+  .top .sub{color:var(--muted);font-size:13px}
+  .top-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .warn{background:var(--danger-soft);color:var(--danger);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px}
+  .strip div{background:var(--surface);padding:14px 18px;min-width:0}
+  .strip b{display:block;font-family:var(--font-head);font-size:28px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .strip span{color:var(--muted);font-size:13px}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .bar input{flex:1 1 220px;min-width:0}
+  .ledger{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;white-space:nowrap}
+  td.num{font-variant-numeric:tabular-nums}
+  tbody tr:last-child td{border-bottom:0}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .empty{padding:56px 20px;text-align:center;color:var(--muted)}
+  .empty b{display:block;color:var(--fg);font-family:var(--font-head);font-size:18px;margin-bottom:4px}
+  .badge{display:inline-block;min-width:30px;text-align:center;padding:2px 10px;border-radius:99px;font-weight:700;font-size:13px;color:var(--on-grade)}
+  .gA{background:var(--g-a)} .gB{background:var(--g-b)} .gC{background:var(--g-c)} .gD{background:var(--g-d)} .gF{background:var(--g-f)} .gNA{background:var(--g-na)}
+  .scale{margin-top:14px;color:var(--muted);font-size:12.5px}
+
+  .overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow-y:auto;z-index:20}
+  .modal{background:var(--surface);color:var(--fg);border-radius:14px;width:100%;max-width:640px;padding:24px;box-shadow:var(--shadow);min-width:0}
+  .modal.narrow{max-width:420px;margin-top:10vh}
+  .modal h2{margin:0 0 4px;font-size:20px}
+  .modal p.hint{margin:0 0 6px;color:var(--muted);font-size:13px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grade-row{display:grid;grid-template-columns:minmax(0,1fr) 96px auto;gap:8px;margin-bottom:8px}
+  .foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:20px}
+  .seg{display:flex;gap:6px;margin:12px 0 10px}
+  .seg .btn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+  textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;min-height:220px}
+
+  .report h2{text-align:center;margin:0;font-size:24px}
+  .report .sub{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 18px}
+  .report .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:16px}
+  .report .totals{display:flex;gap:36px;justify-content:center;margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+  .report .totals div{text-align:center;color:var(--muted);font-size:13px}
+  .report .totals b{display:block;color:var(--fg);font-family:var(--font-head);font-size:26px}
+  .report h3{margin:0 0 8px;font-size:15px}
+  .report .comments{border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap;min-height:72px;overflow-wrap:anywhere}
+  .report .sig{display:flex;justify-content:space-between;gap:20px;margin-top:48px;color:var(--muted);font-size:13px}
+  .report .sig span{border-top:1px solid var(--fg);padding-top:6px;flex:1;max-width:240px;text-align:center}
+
+  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13.5px;z-index:40;max-width:90vw}
+
+  /* Small, restrained entrance and hover effects. */
+  @media (prefers-reduced-motion:no-preference){
+    .login-card,.wrap{animation:rise-in .4s ease-out both}
+    .strip div{transition:background .18s,transform .18s}
+    .strip div:hover{transform:translateY(-2px);background:var(--accent-soft)}
+    .btn{transition:background .15s,filter .15s,transform .15s}
+    .btn:hover{transform:translateY(-1px)}
+    .modal{animation:modal-in .18s ease-out both}
+    @keyframes rise-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes modal-in{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+  }
+  @media (max-width:640px){
+    .row2,.report .meta{grid-template-columns:1fr}
+    .hide-sm{display:none}
+    th,td{padding:10px}
+    .modal{padding:18px}
+  }
+  @media print{
+    body{background:#fff;color:#000;padding:0}
+    body > *:not(#reportView){display:none!important}
+    #reportView{position:static;background:none;padding:0;display:block!important}
+    #reportView .modal{box-shadow:none;max-width:none;padding:0;background:#fff;color:#000}
+    .no-print{display:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- SIGN IN -->
+<div id="loginView">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <h1>Teacher Gradebook</h1>
+    <p>Sign in to open your students and reports.</p>
+    <label for="lu">Username</label>
+    <input id="lu" required autocomplete="off" autocapitalize="none" spellcheck="false">
+    <label for="lp">Password</label>
+    <input id="lp" type="password" required autocomplete="off">
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn full" type="submit">Sign in</button>
+  </form>
+</div>
+
+<!-- DASHBOARD -->
+<div id="appView" hidden>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Teacher Gradebook</h1>
+        <div class="sub">Records are saved in this browser automatically.</div>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost sm" id="expBtn" type="button">Export backup</button>
+        <button class="btn ghost sm" id="impBtn" type="button">Import</button>
+        <button class="btn ghost sm" id="logout" type="button">Logout</button>
+      </div>
+    </div>
+    <div class="warn" id="storeWarn" hidden>This browser is blocking local storage, so your records will not survive a refresh. Export a backup before leaving.</div>
+
+    <div class="strip">
+      <div><b id="sCount">0</b><span>Students</span></div>
+      <div><b id="sAvg">–</b><span>Class average</span></div>
+      <div><b id="sPass">0</b><span>Passing (average 60+)</span></div>
+      <div><b id="sAcc">0</b><span>Student accounts</span></div>
+    </div>
+
+    <div class="bar">
+      <input id="search" type="search" placeholder="Search by name or section" aria-label="Search students">
+      <button class="btn" id="addBtn" type="button">Add student</button>
+    </div>
+
+    <div class="ledger">
+      <table id="tbl">
+        <thead><tr><th>Student</th><th class="hide-sm">Section</th><th class="hide-sm">Subjects</th><th class="hide-sm">Login</th><th>Average</th><th>Grade</th><th>Actions</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty"></div>
+    </div>
+    <div class="scale">Letter grades: A 90–100, B 80–89, C 70–79, D 60–69, F below 60.</div>
+  </div>
+</div>
+
+<!-- STUDENT VIEW (student sign-in) -->
+<div id="studentView" hidden>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1 id="svName">My report</h1>
+        <div class="sub">Signed in as a student. You can see your own grades only.</div>
+      </div>
+      <div class="top-actions"><button class="btn ghost sm" id="svLogout" type="button">Logout</button></div>
+    </div>
+    <div class="modal" style="max-width:720px"><div class="report" id="svBody"></div></div>
+  </div>
+</div>
+
+<!-- STUDENT FORM -->
+<div class="overlay" id="formView" hidden>
+  <form class="modal" id="studentForm">
+    <h2 id="formTitle">Add student</h2>
+    <div class="row2">
+      <div><label for="fName">Name</label><input id="fName" required></div>
+      <div><label for="fSection">Section level</label><input id="fSection" placeholder="e.g. Grade 7, Section A"></div>
+    </div>
+    <label>Subject grades (0 to 100)</label>
+    <div id="gradeRows"></div>
+    <button type="button" class="btn ghost sm" id="addSubject">Add subject</button>
+    <label for="fReport">Teacher report comments</label>
+    <textarea id="fReport" placeholder="Strengths, areas to improve, behavior, recommendations"></textarea>
+    <label>Student login (optional)</label>
+    <p class="hint">Set a username and password so this student can sign in and view their own report. The account is saved with the student.</p>
+    <div class="row2">
+      <div><label for="fUser">Username</label><input id="fUser" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+      <div><label for="fPass">Password</label><input id="fPass" autocomplete="off"></div>
+    </div>
+    <div class="err" id="formErr" role="alert"></div>
+    <div class="foot">
+      <button type="button" class="btn ghost" id="cancelForm">Cancel</button>
+      <button type="submit" class="btn">Save student</button>
+    </div>
+  </form>
+</div>
+
+<!-- REPORT -->
+<div class="overlay" id="reportView" hidden>
+  <div class="modal">
+    <div class="report" id="reportBody"></div>
+    <div class="foot no-print">
+      <span class="hint" style="margin-right:auto;color:var(--muted);font-size:12.5px;align-self:center">To print, use your browser's print command (Ctrl/Cmd+P).</span>
+      <button class="btn ghost" id="closeReport" type="button">Close</button>
+      <button class="btn" id="copyReport" type="button">Copy report</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="overlay" id="exportView" hidden>
+  <div class="modal">
+    <h2>Export backup</h2>
+    <p class="hint">Copy this text and save it in a file (backup.json or backup.csv). Use Import later to restore it. Backups include student passwords, so keep the file private.</p>
+    <div class="seg">
+      <button class="btn ghost sm on" id="segJson" type="button">JSON</button>
+      <button class="btn ghost sm" id="segCsv" type="button">CSV</button>
+    </div>
+    <textarea class="mono" id="exportText" readonly aria-label="Backup data"></textarea>
+    <div class="foot">
+      <button class="btn ghost" id="closeExport" type="button">Close</button>
+      <button class="btn" id="copyExport" type="button">Copy to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<div class="overlay" id="importView" hidden>
+  <div class="modal">
+    <h2>Import backup</h2>
+    <p class="hint">Choose a JSON or CSV backup file, or paste its contents below.</p>
+    <label for="impFile">Backup file</label>
+    <input type="file" id="impFile" accept=".json,.csv,text/csv,application/json,text/plain">
+    <label for="impText">Or paste contents</label>
+    <textarea class="mono" id="impText" placeholder="Paste JSON or CSV here"></textarea>
+    <div class="err" id="impErr" role="alert"></div>
+    <div class="foot">
+      <button class="btn ghost" id="closeImport" type="button">Cancel</button>
+      <button class="btn ghost" id="impMerge" type="button">Add to current records</button>
+      <button class="btn" id="impReplace" type="button">Replace all records</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="overlay" id="confirmView" hidden>
+  <div class="modal narrow">
+    <h2 id="cTitle">Are you sure?</h2>
+    <p class="hint" id="cText"></p>
+    <div class="foot">
+      <button class="btn ghost" id="cNo" type="button">Cancel</button>
+      <button class="btn danger" id="cYes" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" hidden></div>
+
+<script>
+const KEY = 'tdg_students_v1';
+const SESSION = 'tdg_session_v1';
+const ADMIN_USER = 'fahadis3mk';
+const ADMIN_PASS = 'abdulmjeedismyslave';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+/* ---------- Storage (all access guarded) ---------- */
+function lsGet(k){ try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); return true; } catch { return false; } }
+function lsDel(k){ try { localStorage.removeItem(k); } catch {} }
+
+let students = [];
+try { const d = JSON.parse(lsGet(KEY)); if (Array.isArray(d)) students = d; } catch {}
+function save(){ $('storeWarn').hidden = lsSet(KEY, JSON.stringify(students)); }
+
+/* ---------- Grades ---------- */
+function average(s){
+  const g = s.grades || [];
+  return g.length ? g.reduce((a, x) => a + x.score, 0) / g.length : null;
+}
+function letter(avg){
+  if (avg === null) return 'N/A';
+  return avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'F';
+}
+const fmt = n => n === null ? '–' : (Math.round(n * 10) / 10).toFixed(1);
+const badge = l => `<span class="badge g${l === 'N/A' ? 'NA' : l}">${l}</span>`;
+
+/* ---------- UI helpers ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+function show(id){ $(id).hidden = false; }
+function hide(id){ $(id).hidden = true; }
+function closeAll(){ ['formView','reportView','exportView','importView','confirmView'].forEach(hide); }
+
+let confirmFn = null;
+function askConfirm(title, text, label, fn){
+  $('cTitle').textContent = title; $('cText').textContent = text; $('cYes').textContent = label;
+  confirmFn = fn; show('confirmView');
+}
+$('cNo').onclick = () => { confirmFn = null; hide('confirmView'); };
+$('cYes').onclick = () => { const f = confirmFn; confirmFn = null; hide('confirmView'); if (f) f(); };
+
+async function copyText(text, btn, ta){
+  const old = btn.textContent;
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+  if (!ok) {
+    const el = ta || Object.assign(document.createElement('textarea'), { value: text });
+    if (!ta) { el.style.position = 'fixed'; el.style.opacity = '0'; document.body.appendChild(el); }
+    el.focus(); el.select();
+    try { ok = document.execCommand('copy'); } catch {}
+    if (!ta) el.remove();
+  }
+  btn.textContent = ok ? 'Copied' : 'Select and copy manually';
+  setTimeout(() => { btn.textContent = old; }, 1800);
+}
+
+/* ---------- Auth ---------- */
+function currentStudent(){
+  const v = lsGet(SESSION) || '';
+  return v.startsWith('s:') ? (students.find(s => s.id === v.slice(2)) || null) : null;
+}
+function showApp(){
+  const v = lsGet(SESSION);
+  const admin = v === '1';
+  const stu = currentStudent();
+  if (v && !admin && !stu) lsDel(SESSION);
+  $('loginView').hidden = admin || !!stu;
+  $('appView').hidden = !admin;
+  $('studentView').hidden = !stu;
+  if (admin) render();
+  if (stu) { $('svName').textContent = stu.name; $('svBody').innerHTML = reportHtml(stu); }
+}
+$('loginForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const u = $('lu').value.trim(), p = $('lp').value;
+  let ok = false;
+  if (u === ADMIN_USER && p === ADMIN_PASS) { lsSet(SESSION, '1'); ok = true; }
+  else {
+    const stu = students.find(s => s.username && s.username.toLowerCase() === u.toLowerCase() && s.password === p);
+    if (stu) { lsSet(SESSION, 's:' + stu.id); ok = true; }
+  }
+  if (ok) { $('loginErr').textContent = ''; $('lp').value = ''; showApp(); }
+  else $('loginErr').textContent = 'Incorrect username or password.';
+});
+const doLogout = () => { lsDel(SESSION); closeAll(); showApp(); };
+$('logout').onclick = doLogout;
+$('svLogout').onclick = doLogout;
+
+/* ---------- Dashboard ---------- */
+function render(){
+  const q = $('search').value.trim().toLowerCase();
+  const list = students.filter(s => !q || s.name.toLowerCase().includes(q) || (s.section || '').toLowerCase().includes(q));
+
+  const avgs = students.map(average).filter(a => a !== null);
+  $('sCount').textContent = students.length;
+  $('sAvg').textContent = avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–';
+  $('sPass').textContent = avgs.filter(a => a >= 60).length;
+  $('sAcc').textContent = students.filter(s => s.username).length;
+
+  $('tbody').innerHTML = list.map(s => {
+    const a = average(s);
+    return `<tr>
+      <td><strong>${esc(s.name)}</strong></td>
+      <td class="hide-sm">${esc(s.section) || '–'}</td>
+      <td class="hide-sm num">${(s.grades || []).length}</td>
+      <td class="hide-sm">${s.username ? esc(s.username) : '–'}</td>
+      <td class="num">${fmt(a)}</td>
+      <td>${badge(letter(a))}</td>
+      <td><div class="acts">
+        <button class="btn ghost sm" data-act="report" data-id="${esc(s.id)}" type="button">Report</button>
+        <button class="btn ghost sm" data-act="edit" data-id="${esc(s.id)}" type="button">Edit</button>
+        <button class="btn ghost sm" data-act="del" data-id="${esc(s.id)}" type="button">Delete</button>
+      </div></td></tr>`;
+  }).join('');
+
+  $('tbl').hidden = list.length === 0;
+  $('empty').hidden = list.length > 0;
+  $('empty').innerHTML = students.length
+    ? '<b>No matches</b>Try a different name or section.'
+    : '<b>No students yet</b>Select “Add student” to enter your first record.';
+}
+$('search').addEventListener('input', render);
+$('tbody').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const s = students.find(x => x.id === b.dataset.id);
+  if (!s) return;
+  if (b.dataset.act === 'edit') openForm(s);
+  if (b.dataset.act === 'report') openReport(s);
+  if (b.dataset.act === 'del') askConfirm('Delete student', `Delete ${s.name} and all their grades and comments? This cannot be undone.`, 'Delete', () => {
+    students = students.filter(x => x.id !== s.id);
+    save(); render(); toast('Student deleted');
+  });
+});
+
+/* ---------- Student form ---------- */
+let editingId = null;
+function gradeRow(subject = '', score = ''){
+  const d = document.createElement('div');
+  d.className = 'grade-row';
+  d.innerHTML = `<input class="gs" placeholder="Subject" aria-label="Subject" value="${esc(subject)}">
+    <input class="gn" type="number" min="0" max="100" step="0.1" placeholder="Score" aria-label="Score" value="${esc(score)}">
+    <button type="button" class="btn ghost sm" aria-label="Remove subject">Remove</button>`;
+  d.querySelector('button').onclick = () => d.remove();
+  $('gradeRows').appendChild(d);
+}
+function openForm(s){
+  editingId = s ? s.id : null;
+  $('formTitle').textContent = s ? 'Edit student' : 'Add student';
+  $('fName').value = s ? s.name : '';
+  $('fSection').value = s ? s.section : '';
+  $('fReport').value = s ? s.report : '';
+  $('fUser').value = s ? (s.username || '') : '';
+  $('fPass').value = s ? (s.password || '') : '';
+  $('formErr').textContent = '';
+  $('gradeRows').innerHTML = '';
+  (s && s.grades.length ? s.grades : [{ subject: '', score: '' }]).forEach(g => gradeRow(g.subject, g.score));
+  show('formView');
+  $('fName').focus();
+}
+$('addBtn').onclick = () => openForm(null);
+$('addSubject').onclick = () => gradeRow();
+$('cancelForm').onclick = () => hide('formView');
+$('studentForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const grades = [...document.querySelectorAll('#gradeRows .grade-row')].map(r => ({
+    subject: r.querySelector('.gs').value.trim(),
+    score: parseFloat(r.querySelector('.gn').value)
+  })).filter(g => g.subject && !isNaN(g.score)).map(g => ({ subject: g.subject, score: Math.min(100, Math.max(0, g.score)) }));
+
+  const data = { name: $('fName').value.trim(), section: $('fSection').value.trim(), grades, report: $('fReport').value.trim(), username: $('fUser').value.trim(), password: $('fPass').value };
+  if (!data.name) return;
+  const fe = $('formErr'); fe.textContent = '';
+  if (data.username && !data.password) { fe.textContent = 'Enter a password for this username.'; return; }
+  if (!data.username && data.password) { fe.textContent = 'Enter a username for this password.'; return; }
+  if (data.username.toLowerCase() === ADMIN_USER.toLowerCase()) { fe.textContent = 'That username is reserved. Choose another.'; return; }
+  if (data.username && students.some(x => x.id !== editingId && (x.username || '').toLowerCase() === data.username.toLowerCase())) { fe.textContent = 'That username is already taken.'; return; }
+  if (editingId) {
+    const i = students.findIndex(x => x.id === editingId);
+    if (i >= 0) students[i] = { ...students[i], ...data };
+  } else {
+    students.push({ id: uid(), ...data });
+  }
+  save(); render(); hide('formView');
+  toast('Student saved');
+});
+
+/* ---------- Report ---------- */
+let reportText = '';
+function reportHtml(s){
+  const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
+  const rows = (s.grades || []).map(g => `<tr><td>${esc(g.subject)}</td><td class="num">${fmt(g.score)}</td><td>${badge(letter(g.score))}</td></tr>`).join('')
+    || '<tr><td colspan="3" style="text-align:center;color:var(--muted)">No grades recorded</td></tr>';
+  return `
+    <h2>Teacher Report</h2>
+    <div class="sub">Generated ${esc(date)}</div>
+    <div class="meta"><div><strong>Student:</strong> ${esc(s.name)}</div><div><strong>Section:</strong> ${esc(s.section) || '–'}</div></div>
+    <table><thead><tr><th>Subject</th><th>Score</th><th>Letter</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="totals"><div><b>${fmt(a)}</b>Average</div><div><b>${l}</b>Overall grade</div></div>
+    <h3>Teacher comments</h3>
+    <div class="comments">${esc(s.report) || 'No comments recorded.'}</div>
+    <div class="sig"><span>Teacher signature</span><span>Date</span></div>`;
+}
+function openReport(s){
+  const a = average(s), l = letter(a), date = new Date().toLocaleDateString();
+  $('reportBody').innerHTML = reportHtml(s);
+  reportText = [
+    'TEACHER REPORT', `Date: ${date}`, `Student: ${s.name}`, `Section: ${s.section || '-'}`, '',
+    ...(s.grades.length ? s.grades.map(g => `${g.subject}: ${fmt(g.score)} (${letter(g.score)})`) : ['No grades recorded']),
+    '', `Average: ${fmt(a)}   Overall grade: ${l}`, '', 'Teacher comments:', s.report || 'No comments recorded.'
+  ].join('\n');
+  show('reportView');
+}
+$('closeReport').onclick = () => hide('reportView');
+$('copyReport').onclick = e => copyText(reportText, e.currentTarget);
+
+/* ---------- Export ---------- */
+const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+function buildJson(){
+  return JSON.stringify({ app: 'teacher-gradebook', version: 1, exported: new Date().toISOString(), students }, null, 2);
+}
+function buildCsv(){
+  const lines = [['Name', 'Section', 'Grades', 'Average', 'Letter', 'Report', 'Username', 'Password'].join(',')];
+  students.forEach(s => {
+    const a = average(s);
+    lines.push([s.name, s.section, s.grades.map(g => `${g.subject}:${g.score}`).join('; '), fmt(a), letter(a), s.report, s.username, s.password].map(csvCell).join(','));
+  });
+  return lines.join('\r\n');
+}
+function setExport(kind){
+  $('segJson').classList.toggle('on', kind === 'json');
+  $('segCsv').classList.toggle('on', kind === 'csv');
+  $('exportText').value = kind === 'json' ? buildJson() : buildCsv();
+}
+$('expBtn').onclick = () => { setExport('json'); show('exportView'); };
+$('segJson').onclick = () => setExport('json');
+$('segCsv').onclick = () => setExport('csv');
+$('closeExport').onclick = () => hide('exportView');
+$('copyExport').onclick = e => copyText($('exportText').value, e.currentTarget, $('exportText'));
+
+/* ---------- Import ---------- */
+function parseCSV(text){
+  const rows = []; let row = [], cur = '', q = false;
+  text = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+      else if (c === '"') q = false;
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); cur = ''; rows.push(row); row = [];
+    } else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+function normalize(s){
+  if (!s || !String(s.name || '').trim()) return null;
+  const grades = Array.isArray(s.grades) ? s.grades
+    .map(g => ({ subject: String(g.subject || '').trim(), score: Math.min(100, Math.max(0, parseFloat(g.score))) }))
+    .filter(g => g.subject && !isNaN(g.score)) : [];
+  return { id: s.id ? String(s.id) : uid(), name: String(s.name).trim(), section: String(s.section || '').trim(), grades, report: String(s.report || '').trim(), username: String(s.username || '').trim(), password: String(s.password || '') };
+}
+function fromCSV(text){
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const idx = k => head.indexOf(k);
+  return rows.slice(1).map(r => ({
+    name: r[idx('name')], section: r[idx('section')], report: r[idx('report')], username: r[idx('username')], password: r[idx('password')],
+    grades: (r[idx('grades')] || '').split(';').map(p => {
+      const i = p.lastIndexOf(':');
+      return i < 0 ? null : { subject: p.slice(0, i).trim(), score: parseFloat(p.slice(i + 1)) };
+    }).filter(Boolean)
+  }));
+}
+function readImport(){
+  const text = $('impText').value.trim();
+  if (!text) throw new Error('Choose a file or paste your backup first.');
+  let raw;
+  if (text[0] === '{' || text[0] === '[') {
+    const d = JSON.parse(text);
+    raw = Array.isArray(d) ? d : d.students;
+  } else raw = fromCSV(text);
+  if (!Array.isArray(raw)) throw new Error('This does not look like a backup from this app.');
+  const out = raw.map(normalize).filter(Boolean);
+  if (!out.length) throw new Error('No valid student records were found.');
+  return out;
+}
+function openImport(){
+  $('impText').value = ''; $('impErr').textContent = ''; $('impFile').value = '';
+  $('impMerge').hidden = students.length === 0;
+  $('impReplace').textContent = students.length ? 'Replace all records' : 'Import';
+  show('importView');
+}
+$('impBtn').onclick = openImport;
+$('closeImport').onclick = () => hide('importView');
+$('impFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { $('impText').value = String(r.result || ''); $('impErr').textContent = ''; };
+  r.onerror = () => { $('impErr').textContent = 'That file could not be read.'; };
+  r.readAsText(f);
+});
+function finishImport(incoming, replace){
+  if (replace) students = incoming;
+  else {
+    const ids = new Set(students.map(s => s.id));
+    const names = new Set(students.map(s => (s.username || '').toLowerCase()).filter(Boolean));
+    incoming.forEach(s => {
+      if (ids.has(s.id)) s.id = uid();
+      if (s.username && names.has(s.username.toLowerCase())) { s.username = ''; s.password = ''; }
+      if (s.username) names.add(s.username.toLowerCase());
+      students.push(s);
+    });
+  }
+  save(); render(); hide('importView');
+  toast(`Imported ${incoming.length} student${incoming.length === 1 ? '' : 's'}`);
+}
+$('impMerge').onclick = () => {
+  try { finishImport(readImport(), false); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; }
+};
+$('impReplace').onclick = () => {
+  let incoming;
+  try { incoming = readImport(); } catch (e) { $('impErr').textContent = e instanceof SyntaxError ? 'That text is not valid JSON or CSV.' : e.message; return; }
+  if (!students.length) return finishImport(incoming, true);
+  askConfirm('Replace all records', `This removes your ${students.length} current student${students.length === 1 ? '' : 's'} and loads ${incoming.length} from the backup.`, 'Replace', () => finishImport(incoming, true));
+};
+
+/* ---------- Dismiss modals with Escape ---------- */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('confirmView').hidden) { $('cNo').click(); return; }
+  closeAll();
+});
+
+/* ---------- Init ---------- */
+showApp();
+</script>
+
+</body>
+</html>
