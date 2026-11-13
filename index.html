@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
+  [hidden]{display:none!important}
   :root{
     --bg:#f4f6f3; --surface:#ffffff; --fg:#1b2420; --muted:#5f6a63; --line:#dde2dc;
     --accent:#1f6f55; --accent-hover:#185a45; --accent-fg:#ffffff; --accent-soft:#e1f0e8;
@@ -36,6 +37,7 @@
 
   *{box-sizing:border-box}
   body{
+    margin:0;
     background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:15px; line-height:1.5;
     padding-block:0;
     padding-left:max(16px, env(safe-area-inset-left, 0px));
@@ -114,22 +116,14 @@
 
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13.5px;z-index:40;max-width:90vw}
 
-  /* Small, restrained entrance and hover effects. */
-  @media (prefers-reduced-motion:no-preference){
-    .login-card,.wrap{animation:rise-in .4s ease-out both}
-    .strip div{transition:background .18s,transform .18s}
-    .strip div:hover{transform:translateY(-2px);background:var(--accent-soft)}
-    .btn{transition:background .15s,filter .15s,transform .15s}
-    .btn:hover{transform:translateY(-1px)}
-    .modal{animation:modal-in .18s ease-out both}
-    @keyframes rise-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes modal-in{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
-  }
   @media (max-width:640px){
     .row2,.report .meta{grid-template-columns:1fr}
     .hide-sm{display:none}
     th,td{padding:10px}
     .modal{padding:18px}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .btn{transition:background .15s,filter .15s}
   }
   @media print{
     body{background:#fff;color:#000;padding:0}
@@ -301,7 +295,7 @@
 const KEY = 'tdg_students_v1';
 const SESSION = 'tdg_session_v1';
 const ADMIN_USER = 'fahadis3mk';
-const ADMIN_PASS = 'abdulmjeedismyslave';
+const ADMIN_PASS = 'Abdulmjeedismyslave';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
