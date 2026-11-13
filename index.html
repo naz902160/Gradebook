@@ -34,20 +34,11 @@
     --overlay:rgba(0,0,0,.65); --shadow:0 18px 50px rgba(0,0,0,.5);
     color-scheme:dark;
   }
-
   *{box-sizing:border-box}
-  body{
-    margin:0;
-    background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:15px; line-height:1.5;
-    padding-block:0;
-    padding-left:max(16px, env(safe-area-inset-left, 0px));
-    padding-right:max(16px, env(safe-area-inset-right, 0px));
-    min-height:100vh;
-  }
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;padding-block:0;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));min-height:100vh}
   button,input,select,textarea{font:inherit;color:inherit}
   h1,h2,h3{font-family:var(--font-head);letter-spacing:-.01em;text-wrap:balance}
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
   #loginView{min-height:calc(100vh - 2px);display:flex;align-items:center;justify-content:center;padding-block:32px}
   .login-card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px;box-shadow:var(--shadow)}
   .login-card h1{margin:0 0 4px;font-size:26px}
@@ -56,7 +47,6 @@
   input,select,textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
   textarea{min-height:110px;resize:vertical}
   .err{color:var(--danger);font-size:13px;min-height:20px;margin-top:12px}
-
   .btn{border:1px solid transparent;background:var(--accent);color:var(--accent-fg);padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600}
   .btn:hover{background:var(--accent-hover)}
   .btn.full{width:100%;margin-top:16px}
@@ -65,7 +55,6 @@
   .btn.danger{background:var(--danger);color:var(--surface)}
   .btn.danger:hover{filter:brightness(1.1)}
   .btn.sm{padding:6px 11px;font-size:13px}
-
   .wrap{max-width:1080px;margin:0 auto;padding-block:20px 48px}
   .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:18px}
   .top h1{margin:0;font-size:24px}
@@ -90,7 +79,6 @@
   .badge{display:inline-block;min-width:30px;text-align:center;padding:2px 10px;border-radius:99px;font-weight:700;font-size:13px;color:var(--on-grade)}
   .gA{background:var(--g-a)} .gB{background:var(--g-b)} .gC{background:var(--g-c)} .gD{background:var(--g-d)} .gF{background:var(--g-f)} .gNA{background:var(--g-na)}
   .scale{margin-top:14px;color:var(--muted);font-size:12.5px}
-
   .overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow-y:auto;z-index:20}
   .modal{background:var(--surface);color:var(--fg);border-radius:14px;width:100%;max-width:640px;padding:24px;box-shadow:var(--shadow);min-width:0}
   .modal.narrow{max-width:420px;margin-top:10vh}
@@ -102,7 +90,6 @@
   .seg{display:flex;gap:6px;margin:12px 0 10px}
   .seg .btn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
   textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;min-height:220px}
-
   .report h2{text-align:center;margin:0;font-size:24px}
   .report .sub{text-align:center;color:var(--muted);font-size:13px;margin:4px 0 18px}
   .report .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:16px}
@@ -113,37 +100,21 @@
   .report .comments{border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap;min-height:72px;overflow-wrap:anywhere}
   .report .sig{display:flex;justify-content:space-between;gap:20px;margin-top:48px;color:var(--muted);font-size:13px}
   .report .sig span{border-top:1px solid var(--fg);padding-top:6px;flex:1;max-width:240px;text-align:center}
-
   #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13.5px;z-index:40;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  @media (max-width:640px){
-    .row2,.report .meta{grid-template-columns:1fr}
-    .hide-sm{display:none}
-    th,td{padding:10px}
-    .modal{padding:18px}
-  }
-  @media (prefers-reduced-motion:no-preference){
-    .btn{transition:background .15s,filter .15s}
-  }
-  @media print{
-    body{background:#fff;color:#000;padding:0}
-    body > *:not(#reportView){display:none!important}
-    #reportView{position:static;background:none;padding:0;display:block!important}
-    #reportView .modal{box-shadow:none;max-width:none;padding:0;background:#fff;color:#000}
-    .no-print{display:none!important}
-  }
+  @media (max-width:640px){.row2,.report .meta{grid-template-columns:1fr}.hide-sm{display:none}th,td{padding:10px}.modal{padding:18px}}
+  @media (prefers-reduced-motion:no-preference){.btn{transition:background .15s,filter .15s}}
+  @media print{body{background:#fff;color:#000;padding:0}body > *:not(#reportView){display:none!important}#reportView{position:static;background:none;padding:0;display:block!important}#reportView .modal{box-shadow:none;max-width:none;padding:0;background:#fff;color:#000}.no-print{display:none!important}}
 </style>
 </head>
 <body>
-
 <div id="loginView">
   <form class="login-card" id="loginForm" autocomplete="off">
     <h1>Teacher Gradebook</h1>
-    <p>Sign in to open your students and reports.</p>
-    <label for="lu">Username</label>
-    <input id="lu" required autocomplete="off" autocapitalize="none" spellcheck="false">
+    <p>Sign in with your Firebase teacher email.</p>
+    <label for="lu">Teacher email</label>
+    <input id="lu" type="email" required autocomplete="email" autocapitalize="none" spellcheck="false">
     <label for="lp">Password</label>
-    <input id="lp" type="password" required autocomplete="off">
+    <input id="lp" type="password" required autocomplete="current-password">
     <div class="err" id="loginErr" role="alert"></div>
     <button class="btn full" type="submit">Sign in</button>
   </form>
@@ -163,19 +134,16 @@
       </div>
     </div>
     <div class="warn" id="storeWarn" hidden>This browser is blocking local storage, so your records will not survive a refresh. Export a backup before leaving.</div>
-
     <div class="strip">
       <div><b id="sCount">0</b><span>Students</span></div>
       <div><b id="sAvg">–</b><span>Class average</span></div>
       <div><b id="sPass">0</b><span>Passing (average 60+)</span></div>
       <div><b id="sAcc">0</b><span>Student accounts</span></div>
     </div>
-
     <div class="bar">
       <input id="search" type="search" placeholder="Search by name or section" aria-label="Search students">
       <button class="btn" id="addBtn" type="button">Add student</button>
     </div>
-
     <div class="ledger">
       <table id="tbl">
         <thead><tr><th>Student</th><th class="hide-sm">Section</th><th class="hide-sm">Subjects</th><th class="hide-sm">Login</th><th>Average</th><th>Grade</th><th>Actions</th></tr></thead>
@@ -284,6 +252,7 @@
 <div id="toast" role="status" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
   const firebaseConfig = {
@@ -297,12 +266,11 @@
   };
 
   const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const db = firebase.firestore();
 
   const KEY = 'tdg_students_v1';
   const SESSION = 'tdg_session_v1';
-  const ADMIN_USER = 'fahadis3mk';
-  const ADMIN_PASS = 'Abdulmjeedismyslave';
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -316,6 +284,7 @@
   try { const d = JSON.parse(lsGet(KEY)); if (Array.isArray(d)) students = d; } catch {}
 
   async function saveRemoteStudents(){
+    if (!auth.currentUser) return;
     try {
       await db.collection('gradebook').doc('students').set({ students, updatedAt: new Date().toISOString() }, { merge: true });
     } catch (e) {
@@ -324,6 +293,7 @@
   }
 
   async function loadRemoteStudents(){
+    if (!auth.currentUser) return;
     try {
       const snap = await db.collection('gradebook').doc('students').get();
       if (snap.exists && Array.isArray(snap.data().students)) {
@@ -388,37 +358,53 @@
     const v = lsGet(SESSION) || '';
     return v.startsWith('s:') ? (students.find(s => s.id === v.slice(2)) || null) : null;
   }
+
   function showApp(){
-    const v = lsGet(SESSION);
-    const admin = v === '1';
+    const user = auth.currentUser;
+    const v = lsGet(SESSION) || '';
     const stu = currentStudent();
-    if (v && !admin && !stu) lsDel(SESSION);
+    const admin = !!user;
+
+    if (v && !user && !stu) lsDel(SESSION);
     $('loginView').hidden = admin || !!stu;
     $('appView').hidden = !admin;
     $('studentView').hidden = !stu;
     if (admin) render();
     if (stu) { $('svName').textContent = stu.name; $('svBody').innerHTML = reportHtml(stu); }
   }
-  $('loginForm').addEventListener('submit', e => {
+
+  $('loginForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const u = $('lu').value.trim(), p = $('lp').value;
-    let ok = false;
-    if (u === ADMIN_USER && p === ADMIN_PASS) { lsSet(SESSION, '1'); ok = true; }
-    else {
-      const stu = students.find(s => s.username && s.username.toLowerCase() === u.toLowerCase() && s.password === p);
-      if (stu) { lsSet(SESSION, 's:' + stu.id); ok = true; }
+    const email = $('lu').value.trim();
+    const password = $('lp').value;
+    $('loginErr').textContent = '';
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      lsSet(SESSION, email);
+      $('lp').value = '';
+      await loadRemoteStudents();
+      showApp();
+    } catch (error) {
+      const message = error && error.code === 'auth/invalid-credential'
+        ? 'Incorrect email or password.'
+        : (error && error.message) || 'Could not sign in.';
+      $('loginErr').textContent = message;
     }
-    if (ok) { $('loginErr').textContent = ''; $('lp').value = ''; showApp(); }
-    else $('loginErr').textContent = 'Incorrect username or password.';
   });
-  const doLogout = () => { lsDel(SESSION); closeAll(); showApp(); };
+
+  async function doLogout(){
+    try { await auth.signOut(); } catch {}
+    lsDel(SESSION);
+    closeAll();
+    showApp();
+  }
   $('logout').onclick = doLogout;
   $('svLogout').onclick = doLogout;
 
   function render(){
     const q = $('search').value.trim().toLowerCase();
     const list = students.filter(s => !q || s.name.toLowerCase().includes(q) || (s.section || '').toLowerCase().includes(q));
-
     const avgs = students.map(average).filter(a => a !== null);
     $('sCount').textContent = students.length;
     $('sAvg').textContent = avgs.length ? fmt(avgs.reduce((a, b) => a + b, 0) / avgs.length) : '–';
@@ -447,6 +433,7 @@
       ? '<b>No matches</b>Try a different name or section.'
       : '<b>No students yet</b>Select “Add student” to enter your first record.';
   }
+
   $('search').addEventListener('input', render);
   $('tbody').addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
@@ -500,7 +487,6 @@
     const fe = $('formErr'); fe.textContent = '';
     if (data.username && !data.password) { fe.textContent = 'Enter a password for this username.'; return; }
     if (!data.username && data.password) { fe.textContent = 'Enter a username for this password.'; return; }
-    if (data.username.toLowerCase() === ADMIN_USER.toLowerCase()) { fe.textContent = 'That username is reserved. Choose another.'; return; }
     if (data.username && students.some(x => x.id !== editingId && (x.username || '').toLowerCase() === data.username.toLowerCase())) { fe.textContent = 'That username is already taken.'; return; }
     if (editingId) {
       const i = students.findIndex(x => x.id === editingId);
@@ -541,9 +527,7 @@
   $('copyReport').onclick = e => copyText(reportText, e.currentTarget);
 
   const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  function buildJson(){
-    return JSON.stringify({ app: 'teacher-gradebook', version: 1, exported: new Date().toISOString(), students }, null, 2);
-  }
+  function buildJson(){ return JSON.stringify({ app: 'teacher-gradebook', version: 1, exported: new Date().toISOString(), students }, null, 2); }
   function buildCsv(){
     const lines = [['Name', 'Section', 'Grades', 'Average', 'Letter', 'Report', 'Username', 'Password'].join(',')];
     students.forEach(s => {
@@ -662,9 +646,18 @@
     closeAll();
   });
 
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      lsSet(SESSION, user.email || user.uid);
+    } else {
+      lsDel(SESSION);
+    }
+    showApp();
+    if (user) loadRemoteStudents();
+  });
+
   hide('confirmView');
   showApp();
-  loadRemoteStudents();
 </script>
 </body>
 </html>
